@@ -121,6 +121,46 @@ def get_path_via_url(url, dest = ".", dirs = False):
         return dest + re.split("/", path)[-1]
 
 
+def download_files(query, timeout=None, filetype=None, site=None, dest=".",
+                   resultsperpage=50, maxresults=1000, repeat=None, dirs=False):
+    """
+    query: one or more words
+    """
+
+    if timeout is not None:
+        socket.setdefaulttimeout(float(timeout))
+
+    try:
+        page = GoogleDl(query, filetype, site, resultsperpage, maxresults, repeat)
+        #print("Query: %s" % (query) if args.verbose else "")
+        n_pages = 1
+        n_results = 0
+        for results in page:
+            print("Trying to download results from page #%d  (results %d-%d)" % (n_pages, n_results, n_results + len(results)))
+            n_results += len(results)
+            n = 0
+            for result in results:
+                n += 1
+                url = result.getURL()
+                path = get_path_via_url(url, dest, dirs)
+                filename = os.path.basename(path)
+                dirname = os.path.dirname(path)
+                os.makedirs(dirname, 0o755, True)
+                print("Page: %i, File: %i" %  (n_pages, n))
+                print("Downloading '%s' from '%s' into %s..." % (filename.encode('utf-8').strip(), url.encode('utf-8').strip(), dirname))
+                if os.path.isfile(path):
+                    print("File '%s' already exists, skipping." % (path.encode('utf-8').strip()))
+                else:
+                    page.dlFile(url, path)
+            n_pages += 1
+        print("Done, downloaded %i files." % n_results)
+
+    except KeyboardInterrupt:
+        sys.exit()
+    except SearchError as err:
+        print("Search failed: %s" % (err))
+
+
 if __name__ == "__main__":
     # Parse arguments.
     parser = argparse.ArgumentParser(add_help=False)
